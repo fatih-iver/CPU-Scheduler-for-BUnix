@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1542370101 source:c:\users\fatih\desktop\os scheduler\main.cpp
+	<iostream>
+	<vector>
+	<string>
+	<fstream>
+	<sstream>
+	<cstdlib>
+
