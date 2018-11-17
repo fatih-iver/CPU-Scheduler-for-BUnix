@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
     list<process> ready_queue;
 
     for (std::vector<process>::iterator it = processes.begin() ; it != processes.end(); it++){
-            cout << it -> name << " ";
+        cout << "(" << it -> arrival_time << ")" << it -> name << " ";
     }
 
     cout << "\n";
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
     sort(processes.begin(), processes.end(), less_than_key());
 
     for (std::vector<process>::iterator it = processes.begin() ; it != processes.end(); it++){
-        cout << it -> name << " ";
+        cout << "(" << it -> arrival_time << ")" << it -> name << " ";
     }
 
     cout << "\n";
@@ -191,7 +191,7 @@ void show_by_priority(list<process>& ready_queue){
 
     cout << "HEAD" << "-";
     for(list<process>::iterator ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
-        cout << ready_queue_iterator -> name << "[" << ready_queue_iterator -> next_instruction_index << "]" << "-";
+        cout << "(" << ready_queue_iterator -> priority << ")" << ready_queue_iterator -> name << "[" << ready_queue_iterator -> next_instruction_index << "]" << "-";
     }
     cout << "TAIL" << "\n";
 }
@@ -201,7 +201,13 @@ void insert_by_priority(list<process>& ready_queue, process& new_process) {
     list<process>::iterator ready_queue_iterator;
 
     for(ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
-        if (ready_queue_iterator -> priority > new_process.priority) { break ;}
+        if (ready_queue_iterator -> priority > new_process.priority) {
+            break;
+        } else if (ready_queue_iterator -> priority == new_process.priority) {
+            if (ready_queue_iterator -> arrival_time > new_process.arrival_time) {
+                break;
+            }
+        }
     }
 
     ready_queue.insert(ready_queue_iterator, new_process);
