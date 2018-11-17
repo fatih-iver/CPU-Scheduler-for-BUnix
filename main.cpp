@@ -1,12 +1,16 @@
 #include <iostream>
 #include <vector>
+#include <list>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <cstring>
 #include <cstdlib>
+#include <algorithm>
 
 using namespace std;
+
+long int system_time;
 
 typedef struct {
 
@@ -17,9 +21,22 @@ typedef struct {
     long int leaving_time;
     vector<string> instruction_names;
     vector<long int> instruction_times;
-    vector<long int>::const_iterator instruction_iterator;
+    long int next_instruction_index;
+    /*
+    bool operator < (const process& _process) const {
+    }
+    */
 
 } process;
+
+struct less_than_key{
+    inline bool operator() (const process& process1, const process& process2){
+        return process1.arrival_time > process2.arrival_time;
+    }
+};
+
+void show_by_priority(list<process>&);
+void insert_by_priority(list<process>&, process&);
 
 int main(int argc, char *argv[])
 {
@@ -112,7 +129,7 @@ int main(int argc, char *argv[])
 
                 }
 
-                it -> instruction_iterator = it -> instruction_times.begin();
+                it -> next_instruction_index = 0;
                 it -> leaving_time = -1;
 
             }
@@ -135,12 +152,57 @@ int main(int argc, char *argv[])
     }
     **/
 
+    // TODO now you need to think about logic and implement priority queue before do that add comments
+
+    long int system_time = 0;
+
+    list<process> ready_queue;
+
+    for (std::vector<process>::iterator it = processes.begin() ; it != processes.end(); it++){
+            cout << it -> name << " ";
+    }
+
+    cout << "\n";
+
+    sort(processes.begin(), processes.end(), less_than_key());
+
+    for (std::vector<process>::iterator it = processes.begin() ; it != processes.end(); it++){
+        cout << it -> name << " ";
+    }
+
+    cout << "\n";
 
 
 
+    while (!processes.empty()){
+        insert_by_priority(ready_queue, processes.back());
+        processes.pop_back();
+    }
 
+    show_by_priority(ready_queue);
 
 
     return 0;
 
+}
+
+void show_by_priority(list<process>& ready_queue){
+    cout << system_time << ":";
+
+    cout << "HEAD" << "-";
+    for(list<process>::iterator ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
+        cout << ready_queue_iterator -> name << "[" << ready_queue_iterator -> next_instruction_index << "]" << "-";
+    }
+    cout << "TAIL" << "\n";
+}
+
+void insert_by_priority(list<process>& ready_queue, process& new_process) {
+
+    list<process>::iterator ready_queue_iterator;
+
+    for(ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
+        if (ready_queue_iterator -> priority > new_process.priority) { break ;}
+    }
+
+    ready_queue.insert(ready_queue_iterator, new_process);
 }
