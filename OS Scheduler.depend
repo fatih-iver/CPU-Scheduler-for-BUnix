@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1542473928 source:c:\users\fatih\desktop\os scheduler\main.cpp
+1542530112 source:c:\users\fatih\desktop\os scheduler\main.cpp
 	<iostream>
 	<vector>
 	<list>
@@ -9,4 +9,5 @@
 	<cstring>
 	<cstdlib>
 	<algorithm>
+	<cstddef>
 
