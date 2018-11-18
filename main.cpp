@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstring>
+#include <numeric>
 #include <cstdlib>
 #include <algorithm>
 #include <cstddef>
@@ -22,6 +23,7 @@ typedef struct {
     long int leaving_time;
     vector<string> instruction_names;
     vector<long int> instruction_times;
+    long int execution_time;
     long int current_instruction_index;
     long int maximum_instruction_index;
 
@@ -33,7 +35,7 @@ struct less_than_key{
     }
 };
 
-void show_by_priority(list<process*>&);
+void show_by_priority(list<process*>&, process*);
 void insert_by_priority(list<process*>&, process*);
 
 int main(int argc, char *argv[])
@@ -104,6 +106,8 @@ int main(int argc, char *argv[])
 
             string line;
 
+            (*it) -> execution_time = 0;
+
             while(getline(code_file, line)){
 
                 istringstream iss(line);
@@ -118,8 +122,12 @@ int main(int argc, char *argv[])
                             (*it) -> instruction_names.push_back(element);
                             break;
                         case 1:
-                            (*it) -> instruction_times.push_back(atol(element.c_str()));
+                            {
+                            long int execute_time = atol(element.c_str());
+                            (*it) -> execution_time += execute_time;
+                            (*it) -> instruction_times.push_back(execute_time);
                             break;
+                            }
                         default:
                             break;
                     }
@@ -131,7 +139,6 @@ int main(int argc, char *argv[])
             (*it) -> current_instruction_index = 0;
             (*it) -> maximum_instruction_index = (*it) -> instruction_times.size();
             (*it) -> leaving_time = -1;
-
             code_file.close();
 
         } else
@@ -172,6 +179,8 @@ int main(int argc, char *argv[])
 
     process* current_process = 0;
 
+    show_by_priority(ready_queue, current_process);
+
     while (true){
 
         if (processes.empty()) {
@@ -179,7 +188,8 @@ int main(int argc, char *argv[])
             if(ready_queue.empty()) {
 
                 if(current_process == 0) {
-                    cout << "Arrivals Queue is Empty, Ready Queue is empty, CPU is idle. Finishing.." << "System Time: " <<  system_time << "\n";
+                    show_by_priority(ready_queue, current_process);
+                    //cout << "Arrivals Queue is Empty, Ready Queue is empty, CPU is idle. Finishing.." << "System Time: " <<  system_time << "\n\n";
                     break;
                 } else {
                     system_time += current_process -> instruction_times[current_process -> current_instruction_index];
@@ -196,8 +206,9 @@ int main(int argc, char *argv[])
             } else {
 
                 if(current_process == 0) {
-                        current_process = &*ready_queue.front();
+                        current_process = ready_queue.front();
                         ready_queue.pop_front();
+                        show_by_priority(ready_queue, current_process);
                         continue;
                 } else {
                     system_time += current_process -> instruction_times[current_process -> current_instruction_index];
@@ -216,14 +227,23 @@ int main(int argc, char *argv[])
 
             if (processes.back() -> arrival_time <= system_time) {
 
+                long int number_of_arrivals = 0;
+
                 while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
                     insert_by_priority(ready_queue, processes.back());
                     processes.pop_back();
+                    number_of_arrivals++;
                 }
 
                 if (current_process == 0) {
+                    show_by_priority(ready_queue, current_process);
                     current_process = ready_queue.front();
                     ready_queue.pop_front();
+                    /**
+                    if(number_of_arrivals > 1) {
+                        show_by_priority(ready_queue, current_process);
+                    }
+                    **/
                     continue;
                 } else {
 
@@ -231,10 +251,13 @@ int main(int argc, char *argv[])
                         insert_by_priority(ready_queue, current_process);
                         current_process = ready_queue.front();
                         ready_queue.pop_front();
+                        show_by_priority(ready_queue, current_process);
                         continue;
                     } else {
+                        show_by_priority(ready_queue, current_process);
                         continue;
                     }
+
                 }
 
             } else {
@@ -261,6 +284,7 @@ int main(int argc, char *argv[])
                     if (current_process == 0) {
                         current_process = ready_queue.front();
                         ready_queue.pop_front();
+                        show_by_priority(ready_queue, current_process);
                         continue;
                     } else {
                         system_time += current_process -> instruction_times[current_process -> current_instruction_index];
@@ -278,22 +302,28 @@ int main(int argc, char *argv[])
         }
     }
 
+    cout << "\n";
 
-    cout << "Number of processes: "<<processes.size() << "\n";
-    for (vector<process*>::iterator it = backup_processes.begin() ; it != backup_processes.end(); ++it)
-        cout << (*it) -> name << " " << (*it) -> arrival_time <<  " " << (*it) -> leaving_time << " " << (*it) -> leaving_time - (*it) -> arrival_time << "\n" ;
-
+    //cout << "Number of processes: "<<processes.size() << "\n";
+    for (vector<process*>::iterator it = backup_processes.begin() ; it != backup_processes.end(); ++it) {
+        cout <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
+        cout <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
+    }
 
     return 0;
 
 }
 
-void show_by_priority(list<process*>& ready_queue){
+void show_by_priority(list<process*>& ready_queue, process* current_process){
     cout << system_time << ":";
-
     cout << "HEAD" << "-";
+
+    if(current_process != 0) {
+        cout << current_process -> name << "[" << current_process -> current_instruction_index + 1 << "]" << "-";
+    }
+
     for(list<process*>::iterator ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
-        cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index << "]" << "-";
+        cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
     }
     cout << "TAIL" << "\n";
 }
