@@ -35,111 +35,23 @@ struct less_than_key{
     }
 };
 
+void read_definition_file(vector<process*>&, char*);
+void read_process_files(vector<process*>&);
 void show_by_priority(list<process*>&, ofstream&);
 void insert_by_priority(list<process*>&, process*);
 
+
 int main(int argc, char *argv[])
 {
+    char* definition_file_pointer = argv[1];
 
     vector<process*> processes;
 
-    ifstream definition_file(argv[1]);
+    read_definition_file(processes, definition_file_pointer);
 
-    if (definition_file.is_open()){
+    read_process_files(processes);
 
-        string line;
-
-        while(getline(definition_file, line)){
-
-            process* new_process_pointer = new process();
-
-            int elementCounter = 0;
-
-            istringstream iss(line);
-
-            for(string element; iss >> element; ){
-
-                switch(elementCounter++) {
-
-                    case 0:
-                        new_process_pointer -> name = element;
-                        break;
-                    case 1:
-                        new_process_pointer -> priority = atol(element.c_str());
-                        break;
-                    case 2:
-                        new_process_pointer -> instruction_file = element;
-                        break;
-                    case 3:
-                        new_process_pointer -> arrival_time = atol(element.c_str());
-                        break;
-                    default:
-                        break;
-                }
-
-            }
-
-            processes.push_back(new_process_pointer);
-
-        }
-
-        definition_file.close();
-
-    } else
-        cout << "Unable to open file";
-
-    for (vector<process*>::iterator it = processes.begin() ; it != processes.end(); ++it) {
-
-        string filename_with_extension = (*it) -> instruction_file + ".txt";
-
-        char cstr[filename_with_extension.size() + 1];
-        strcpy(cstr, filename_with_extension.c_str());	// or pass &s[0]
-
-        ifstream code_file(cstr);
-
-        if (code_file.is_open()){
-
-            string line;
-
-            (*it) -> execution_time = 0;
-
-            while(getline(code_file, line)){
-
-                istringstream iss(line);
-
-                int elementCounter = 0;
-
-                for(string element; iss >> element; ){
-
-                    switch(elementCounter++) {
-
-                        case 0:
-                            (*it) -> instruction_names.push_back(element);
-                            break;
-                        case 1:
-                            (*it) -> instruction_times.push_back(atol(element.c_str()));
-                            break;
-                        default:
-                            break;
-                    }
-
-                }
-
-            }
-
-            (*it) -> current_instruction_index = 0;
-            (*it) -> maximum_instruction_index = (*it) -> instruction_times.size();
-            (*it) -> execution_time = 0;
-            (*it) -> leaving_time = -1;
-
-            code_file.close();
-
-        } else
-            cout << "Unable to open file";
-
-    }
-
-    vector<process*> backup_processes = processes;
+    vector<process*> processes_backup = processes;
 
     sort(processes.begin(), processes.end(), less_than_key());
 
@@ -185,7 +97,7 @@ int main(int argc, char *argv[])
     cout << "\n";
     output_file << "\n";
 
-    for (vector<process*>::iterator it = backup_processes.begin() ; it != backup_processes.end(); ++it) {
+    for (vector<process*>::iterator it = processes_backup.begin() ; it != processes_backup.end(); ++it) {
         cout <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
         output_file <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
         cout <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
@@ -195,6 +107,110 @@ int main(int argc, char *argv[])
     output_file.close();
 
     return 0;
+
+}
+
+void read_definition_file(vector<process*>& processes, char* definition_file_pointer) {
+
+    ifstream definition_file(definition_file_pointer);
+
+    if (definition_file.is_open()){
+
+        string line;
+
+        while(getline(definition_file, line)){
+
+            process* new_process_pointer = new process();
+
+            int elementCounter = 0;
+
+            istringstream iss(line);
+
+            for(string element; iss >> element; ){
+
+                switch(elementCounter++) {
+
+                    case 0:
+                        new_process_pointer -> name = element;
+                        break;
+                    case 1:
+                        new_process_pointer -> priority = atol(element.c_str());
+                        break;
+                    case 2:
+                        new_process_pointer -> instruction_file = element;
+                        break;
+                    case 3:
+                        new_process_pointer -> arrival_time = atol(element.c_str());
+                        break;
+                    default:
+                        throw "File-Format Module CANNOT parse the file!";;
+
+                }
+
+            }
+
+            processes.push_back(new_process_pointer);
+
+        }
+
+        definition_file.close();
+
+    } else
+        cout << "Unable to open file";
+}
+
+void read_process_files(vector<process*>& processes) {
+
+    for (vector<process*>::iterator it = processes.begin() ; it != processes.end(); ++it) {
+
+        string filename_with_extension = (*it) -> instruction_file + ".txt";
+
+        char cstr[filename_with_extension.size() + 1];
+        strcpy(cstr, filename_with_extension.c_str());	// or pass &s[0]
+
+        ifstream code_file(cstr);
+
+        if (code_file.is_open()){
+
+            string line;
+
+            (*it) -> execution_time = 0;
+
+            while(getline(code_file, line)){
+
+                istringstream iss(line);
+
+                int elementCounter = 0;
+
+                for(string element; iss >> element; ){
+
+                    switch(elementCounter++) {
+
+                        case 0:
+                            (*it) -> instruction_names.push_back(element);
+                            break;
+                        case 1:
+                            (*it) -> instruction_times.push_back(atol(element.c_str()));
+                            break;
+                        default:
+                            throw "File-Format Module CANNOT parse the file!";;
+                    }
+
+                }
+
+            }
+
+            (*it) -> current_instruction_index = 0;
+            (*it) -> maximum_instruction_index = (*it) -> instruction_times.size();
+            (*it) -> execution_time = 0;
+            (*it) -> leaving_time = -1;
+
+            code_file.close();
+
+        } else
+            cout << "Unable to open file";
+
+    }
 
 }
 
@@ -214,6 +230,7 @@ void show_by_priority(list<process*>& ready_queue, ofstream& output_file){
         cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
         output_file << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
     }
+
 
     cout << "TAIL" << "\n";
     output_file << "TAIL" << "\n";
