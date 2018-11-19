@@ -2,8 +2,3 @@ P1 4 code1 40
 P2 3 code2 120
 P3 6 code1 250
 P4 2 code3 470
-P5 4 code3 40
-P6 4 code4 12
-P7 8 code2 350
-P8 3 code2 170
-P9 1 code4 870

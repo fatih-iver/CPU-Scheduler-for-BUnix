@@ -35,7 +35,7 @@ struct less_than_key{
     }
 };
 
-void show_by_priority(list<process*>&, process*, ofstream&);
+void show_by_priority(list<process*>&, ofstream&);
 void insert_by_priority(list<process*>&, process*);
 
 int main(int argc, char *argv[])
@@ -87,11 +87,6 @@ int main(int argc, char *argv[])
 
     } else
         cout << "Unable to open file";
-    /**
-    cout << "Number of processes: "<<processes.size() << "\n";
-    for (vector<process*>::iterator it = processes.begin() ; it != processes.end(); ++it)
-        cout << (*it) -> name << " " << (*it) -> priority << " " << (*it) -> instruction_file << " " << (*it) -> arrival_time << "\n" ;
-    **/
 
     for (vector<process*>::iterator it = processes.begin() ; it != processes.end(); ++it) {
 
@@ -122,12 +117,8 @@ int main(int argc, char *argv[])
                             (*it) -> instruction_names.push_back(element);
                             break;
                         case 1:
-                            {
-                            long int execute_time = atol(element.c_str());
-                            (*it) -> execution_time += execute_time;
-                            (*it) -> instruction_times.push_back(execute_time);
+                            (*it) -> instruction_times.push_back(atol(element.c_str()));
                             break;
-                            }
                         default:
                             break;
                     }
@@ -138,7 +129,9 @@ int main(int argc, char *argv[])
 
             (*it) -> current_instruction_index = 0;
             (*it) -> maximum_instruction_index = (*it) -> instruction_times.size();
+            (*it) -> execution_time = 0;
             (*it) -> leaving_time = -1;
+
             code_file.close();
 
         } else
@@ -146,163 +139,47 @@ int main(int argc, char *argv[])
 
     }
 
-    /**
-    for (std::vector<process>::iterator m_it = processes.begin() ; m_it != processes.end(); ++m_it){
-        for (std::vector<string>::iterator s_it = m_it -> instruction_names.begin() ; s_it != m_it -> instruction_names.end(); ++s_it)
-            cout << *s_it <<  " ";
-        cout << "\n";
-        for (std::vector<long int>::iterator s_it = m_it -> instruction_times.begin() ; s_it != m_it -> instruction_times.end(); ++s_it)
-            cout << *s_it <<  " ";
-        cout << "\n";
-    }
-    **/
-    /**
-    for (std::vector<process*>::iterator it = processes.begin() ; it != processes.end(); it++){
-        cout << "(" << (*it) -> arrival_time << ")" << (*it) -> name << " "<< (*it) ->current_instruction_index << " ";
-    }
-
-    cout << "\n";
-    **/
     vector<process*> backup_processes = processes;
+
     sort(processes.begin(), processes.end(), less_than_key());
 
-    /**
-    for (std::vector<process*>::iterator it = processes.begin() ; it != processes.end(); it++){
-        cout << "(" << (*it) -> arrival_time << ")" << " "<< (*it) ->current_instruction_index << " " << (*it) -> name << "-" << (*it) -> maximum_instruction_index << " " << (*it) -> instruction_times[0] << " " ;
-    }
-
-    cout << "\n";
-    **/
-
+    process* current_process = 0;
 
     list<process*> ready_queue;
-
-    process* current_process = 0;
 
     ofstream output_file;
     output_file.open("output.txt");
 
-    show_by_priority(ready_queue, current_process, output_file);
+    show_by_priority(ready_queue, output_file);
 
-    while (true){
+    while (true) {
 
-        if (processes.empty()) {
+        while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
+            insert_by_priority(ready_queue, processes.back());
+            processes.pop_back();
+            show_by_priority(ready_queue, output_file);
+        }
 
-            if(ready_queue.empty()) {
+        if(!ready_queue.empty()) {
 
-                if(current_process == 0) {
-                    show_by_priority(ready_queue, current_process, output_file);
-                    //cout << "Arrivals Queue is Empty, Ready Queue is empty, CPU is idle. Finishing.." << "System Time: " <<  system_time << "\n\n";
-                    break;
-                } else {
-                    system_time += current_process -> instruction_times[current_process -> current_instruction_index];
-                    current_process -> current_instruction_index++;
-                    if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                        current_process -> leaving_time = system_time;
-                        current_process = 0;
-                        continue;
-                    } else {
-                        continue;
-                    }
-                }
-
-            } else {
-
-                if(current_process == 0) {
-                        current_process = ready_queue.front();
-                        ready_queue.pop_front();
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                } else {
-                    system_time += current_process -> instruction_times[current_process -> current_instruction_index];
-                    current_process -> current_instruction_index++;
-                    if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                        current_process -> leaving_time = system_time;
-                        current_process = 0;
-                        continue;
-                    } else {
-                        continue;
-                    }
-                }
+            current_process = ready_queue.front();
+            system_time += current_process -> instruction_times[current_process -> current_instruction_index];
+            current_process -> execution_time += current_process -> instruction_times[current_process -> current_instruction_index++];
+            if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
+                current_process -> leaving_time = system_time;
+                ready_queue.pop_front();
+                show_by_priority(ready_queue, output_file);
             }
 
         } else {
 
-            if (processes.back() -> arrival_time <= system_time) {
-
-                long int number_of_arrivals = 0;
-
-                while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
-                    insert_by_priority(ready_queue, processes.back());
-                    processes.pop_back();
-                    number_of_arrivals++;
-                }
-
-                if (current_process == 0) {
-                    show_by_priority(ready_queue, current_process, output_file);
-                    current_process = ready_queue.front();
-                    ready_queue.pop_front();
-                    /**
-                    if(number_of_arrivals > 1) {
-                        show_by_priority(ready_queue, current_process);
-                    }
-                    **/
-                    continue;
-                } else {
-
-                    if (ready_queue.front() -> priority < current_process -> priority) {
-                        insert_by_priority(ready_queue, current_process);
-                        current_process = ready_queue.front();
-                        ready_queue.pop_front();
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                    } else {
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                    }
-
-                }
-
+            if(!processes.empty()) {
+                system_time =  processes.back() -> arrival_time;
             } else {
-
-                if(ready_queue.empty()) {
-
-                    if (current_process == 0) {
-                        system_time = processes.back() -> arrival_time;
-                        continue;
-                    } else {
-                        system_time += (current_process -> instruction_times[current_process -> current_instruction_index]);
-                        current_process -> current_instruction_index++;
-                        if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                            current_process -> leaving_time = system_time;
-                            current_process = 0;
-                            continue;
-                        } else {
-                            continue;
-                        }
-                    }
-
-                } else {
-
-                    if (current_process == 0) {
-                        current_process = ready_queue.front();
-                        ready_queue.pop_front();
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                    } else {
-                        system_time += current_process -> instruction_times[current_process -> current_instruction_index];
-                        current_process -> current_instruction_index++;
-                        if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                            current_process -> leaving_time = system_time;
-                            current_process = 0;
-                            continue;
-                        } else {
-                            continue;
-                        }
-                    }
-                }
+                break;
             }
         }
+
     }
 
     cout << "\n";
@@ -321,27 +198,23 @@ int main(int argc, char *argv[])
 
 }
 
-void show_by_priority(list<process*>& ready_queue, process* current_process, ofstream& output_file){
+void show_by_priority(list<process*>& ready_queue, ofstream& output_file){
 
     cout << system_time << ":";
     output_file << system_time << ":";
     cout << "HEAD" << "-";
     output_file << "HEAD" << "-";
 
-    if(current_process != 0) {
-        cout << current_process -> name << "[" << current_process -> current_instruction_index + 1 << "]" << "-";
-        output_file << current_process -> name << "[" << current_process -> current_instruction_index + 1 << "]" << "-";
-    } else {
-        if(ready_queue.empty()) {
-            cout << "-";
-            output_file << "-";
-        }
+    if(ready_queue.empty()) {
+        cout << "-";
+        output_file << "-";
     }
 
     for(list<process*>::iterator ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
         cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
         output_file << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
     }
+
     cout << "TAIL" << "\n";
     output_file << "TAIL" << "\n";
 }
