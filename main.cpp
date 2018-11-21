@@ -12,8 +12,10 @@
 
 using namespace std;
 
+// Global System Time
 long int system_time = 0;
 
+// Process Definition
 typedef struct {
 
     string name;
@@ -28,35 +30,43 @@ typedef struct {
     long int maximum_instruction_index;
 
 } process;
-
+// Compare two processes by their arrival time
 struct less_than_key{
     inline bool operator() (const process* process1, const process* process2){
         return process1 -> arrival_time > process2 -> arrival_time;
     }
 };
 
+// Read the definition file to create process objects
 void read_definition_file(vector<process*>&, char*);
+// Read each process's file to get instructions
 void read_process_files(vector<process*>&);
+// Show ready queue by considering their priority and arrival time
 void show_by_priority(list<process*>&, ofstream&);
+// Insert a process to the appropriate place in ready queue
 void insert_by_priority(list<process*>&, process*);
+// Given a process, show waiting and turnaround time
+void show_statistics(vector<process*>&, ofstream&);
 
 
 int main(int argc, char *argv[])
 {
     char* definition_file_pointer = argv[1];
-
+    // Arrival Process's List
     vector<process*> processes;
 
     read_definition_file(processes, definition_file_pointer);
 
     read_process_files(processes);
-
+    // Backup List for Processes
     vector<process*> processes_backup = processes;
 
+    // Sort arrival list based on arrival time
     sort(processes.begin(), processes.end(), less_than_key());
 
     process* current_process = 0;
 
+    // Ready Queue
     list<process*> ready_queue;
 
     ofstream output_file;
@@ -66,17 +76,19 @@ int main(int argc, char *argv[])
 
     while (true) {
 
+        // Check if there is an arrival, if so take arriving process to the ready queue
         while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
             insert_by_priority(ready_queue, processes.back());
             processes.pop_back();
             show_by_priority(ready_queue, output_file);
         }
 
+        // Check if there is a process in ready queue, if so, process it's instruction
         if(!ready_queue.empty()) {
-
             current_process = ready_queue.front();
             system_time += current_process -> instruction_times[current_process -> current_instruction_index];
             current_process -> execution_time += current_process -> instruction_times[current_process -> current_instruction_index++];
+            // If "exit" instruction is executed, remove the process from the ready queue
             if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
                 current_process -> leaving_time = system_time;
                 ready_queue.pop_front();
@@ -84,7 +96,7 @@ int main(int argc, char *argv[])
             }
 
         } else {
-
+            // If ready queue and arrival queue is empty, then there is no more thing do to, terminate system.
             if(!processes.empty()) {
                 system_time =  processes.back() -> arrival_time;
             } else {
@@ -94,22 +106,14 @@ int main(int argc, char *argv[])
 
     }
 
-    cout << "\n";
-    output_file << "\n";
-
-    for (vector<process*>::iterator it = processes_backup.begin() ; it != processes_backup.end(); ++it) {
-        cout <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
-        output_file <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
-        cout <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
-        output_file <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
-    }
+    show_statistics(processes_backup, output_file);
 
     output_file.close();
 
     return 0;
 
 }
-
+// Parse the definition file and create process objects
 void read_definition_file(vector<process*>& processes, char* definition_file_pointer) {
 
     ifstream definition_file(definition_file_pointer);
@@ -158,7 +162,7 @@ void read_definition_file(vector<process*>& processes, char* definition_file_poi
     } else
         cout << "Unable to open file";
 }
-
+// Read process code files to get instruction names and times
 void read_process_files(vector<process*>& processes) {
 
     for (vector<process*>::iterator it = processes.begin() ; it != processes.end(); ++it) {
@@ -213,29 +217,29 @@ void read_process_files(vector<process*>& processes) {
     }
 
 }
-
+// Iterate through ready queue and write it output to the output file.
 void show_by_priority(list<process*>& ready_queue, ofstream& output_file){
 
-    cout << system_time << ":";
+    //cout << system_time << ":";
     output_file << system_time << ":";
-    cout << "HEAD" << "-";
+    //cout << "HEAD" << "-";
     output_file << "HEAD" << "-";
 
     if(ready_queue.empty()) {
-        cout << "-";
+        //cout << "-";
         output_file << "-";
     }
 
     for(list<process*>::iterator ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
-        cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
+        //cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
         output_file << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
     }
 
-
-    cout << "TAIL" << "\n";
+    //cout << "TAIL" << "\n";
     output_file << "TAIL" << "\n";
 }
 
+// Find the appropriate place for the given process based on priority and arrival time, then call list's insert method
 void insert_by_priority(list<process*>& ready_queue, process* new_process_pointer) {
 
     list<process*>::iterator ready_queue_iterator;
@@ -252,3 +256,20 @@ void insert_by_priority(list<process*>& ready_queue, process* new_process_pointe
 
     ready_queue.insert(ready_queue_iterator, new_process_pointer);
 }
+// Show turnaround and waiting time for processes
+void show_statistics(vector<process*>& processes_backup, ofstream& output_file) {
+
+    //cout << "\n";
+    output_file << "\n";
+
+    for (vector<process*>::iterator it = processes_backup.begin() ; it != processes_backup.end(); ++it) {
+        //cout <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
+        output_file <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
+        //cout <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
+        output_file <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
+    }
+
+}
+
+
+
