@@ -14,6 +14,7 @@ using namespace std;
 
 // Global System Time
 long int system_time = 0;
+long int last_arrivals_time = -1;
 
 // Process Definition
 typedef struct {
@@ -30,12 +31,6 @@ typedef struct {
     long int maximum_instruction_index;
 
 } process;
-// Compare two processes by their arrival time
-struct less_than_key{
-    inline bool operator() (const process* process1, const process* process2){
-        return process1 -> arrival_time > process2 -> arrival_time;
-    }
-};
 
 // Read the definition file to create process objects
 void read_definition_file(vector<process*>&, char*);
@@ -61,8 +56,7 @@ int main(int argc, char *argv[])
     // Backup List for Processes
     vector<process*> processes_backup = processes;
 
-    // Sort arrival list based on arrival time
-    sort(processes.begin(), processes.end(), less_than_key());
+    reverse(processes.begin(), processes.end());
 
     process* current_process = 0;
 
@@ -78,8 +72,14 @@ int main(int argc, char *argv[])
 
         // Check if there is an arrival, if so take arriving process to the ready queue
         while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
+            last_arrivals_time = processes.back() -> arrival_time;
             insert_by_priority(ready_queue, processes.back());
             processes.pop_back();
+            // If there are processes arrive at the same time, take them into queue before showing change in queue
+            while(!processes.empty() && processes.back() -> arrival_time == last_arrivals_time) {
+                insert_by_priority(ready_queue, processes.back());
+                processes.pop_back();
+            }
             show_by_priority(ready_queue, output_file);
         }
 
