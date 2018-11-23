@@ -39,6 +39,7 @@
 		<Unit filename="code4.txt" />
 		<Unit filename="definition.txt" />
 		<Unit filename="main.cpp" />
+		<Unit filename="output.txt" />
 		<Unit filename="outputO.txt" />
 		<Extensions>
 			<code_completion />

@@ -67,7 +67,6 @@ int main(int argc, char *argv[])
     output_file.open("output.txt");
 
     show_by_priority(ready_queue, output_file);
-
     while (true) {
 
         // Check if there is an arrival, if so take arriving process to the ready queue
@@ -92,7 +91,11 @@ int main(int argc, char *argv[])
             if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
                 current_process -> leaving_time = system_time;
                 ready_queue.pop_front();
+                if(!processes.empty() && processes.back() -> arrival_time == system_time) {
+                    continue;
+                }
                 show_by_priority(ready_queue, output_file);
+
             }
 
         } else {
@@ -266,10 +269,9 @@ void show_statistics(vector<process*>& processes_backup, ofstream& output_file) 
         //cout <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
         output_file <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
         //cout <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
-        output_file <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
+        output_file <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << "\n" ;
     }
 
 }
-
 
 
