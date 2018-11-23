@@ -70,12 +70,8 @@ int main(int argc, char *argv[])
     while (true) {
 
         // Check if there is an arrival, if so take arriving process to the ready queue
-        while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
-            last_arrivals_time = processes.back() -> arrival_time;
-            insert_by_priority(ready_queue, processes.back());
-            processes.pop_back();
-            // If there are processes arrive at the same time, take them into queue before showing change in queue
-            while(!processes.empty() && processes.back() -> arrival_time == last_arrivals_time) {
+        if(!processes.empty() && processes.back() -> arrival_time <= system_time) {
+            while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
                 insert_by_priority(ready_queue, processes.back());
                 processes.pop_back();
             }

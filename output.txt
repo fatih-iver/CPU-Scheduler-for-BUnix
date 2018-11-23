@@ -1,4 +1,3 @@
-Hello World
 0:HEAD--TAIL
 40:HEAD-P1[1]-TAIL
 130:HEAD-P2[1]-P1[5]-TAIL
