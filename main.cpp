@@ -12,8 +12,11 @@
 
 using namespace std;
 
+// Global System Time
 long int system_time = 0;
+long int last_arrivals_time = -1;
 
+// Process Definition
 typedef struct {
 
     string name;
@@ -29,21 +32,90 @@ typedef struct {
 
 } process;
 
-struct less_than_key{
-    inline bool operator() (const process* process1, const process* process2){
-        return process1 -> arrival_time > process2 -> arrival_time;
-    }
-};
-
-void show_by_priority(list<process*>&, process*, ofstream&);
+// Read the definition file to create process objects
+void read_definition_file(vector<process*>&, char*);
+// Read each process's file to get instructions
+void read_process_files(vector<process*>&);
+// Show ready queue by considering their priority and arrival time
+void show_by_priority(list<process*>&, ofstream&);
+// Insert a process to the appropriate place in ready queue
 void insert_by_priority(list<process*>&, process*);
+// Given a process, show waiting and turnaround time
+void show_statistics(vector<process*>&, ofstream&);
+
 
 int main(int argc, char *argv[])
 {
-
+    char* definition_file_pointer = argv[1];
+    // Arrival Process's List
     vector<process*> processes;
 
-    ifstream definition_file(argv[1]);
+    read_definition_file(processes, definition_file_pointer);
+
+    read_process_files(processes);
+    // Backup List for Processes
+    vector<process*> processes_backup = processes;
+
+    reverse(processes.begin(), processes.end());
+
+    process* current_process = 0;
+
+    // Ready Queue
+    list<process*> ready_queue;
+
+    ofstream output_file;
+    output_file.open("output.txt");
+
+    show_by_priority(ready_queue, output_file);
+    while (true) {
+
+        // Check if there is an arrival, if so take arriving process to the ready queue
+        if(!processes.empty() && processes.back() -> arrival_time <= system_time) {
+            while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
+                insert_by_priority(ready_queue, processes.back());
+                processes.pop_back();
+            }
+            show_by_priority(ready_queue, output_file);
+        }
+
+        // Check if there is a process in ready queue, if so, process it's instruction
+        if(!ready_queue.empty()) {
+            current_process = ready_queue.front();
+            system_time += current_process -> instruction_times[current_process -> current_instruction_index];
+            current_process -> execution_time += current_process -> instruction_times[current_process -> current_instruction_index++];
+            // If "exit" instruction is executed, remove the process from the ready queue
+            if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
+                current_process -> leaving_time = system_time;
+                ready_queue.pop_front();
+                if(!processes.empty() && processes.back() -> arrival_time == system_time) {
+                    continue;
+                }
+                show_by_priority(ready_queue, output_file);
+
+            }
+
+        } else {
+            // If ready queue and arrival queue is empty, then there is no more thing do to, terminate system.
+            if(!processes.empty()) {
+                system_time =  processes.back() -> arrival_time;
+            } else {
+                break;
+            }
+        }
+
+    }
+
+    show_statistics(processes_backup, output_file);
+
+    output_file.close();
+
+    return 0;
+
+}
+// Parse the definition file and create process objects
+void read_definition_file(vector<process*>& processes, char* definition_file_pointer) {
+
+    ifstream definition_file(definition_file_pointer);
 
     if (definition_file.is_open()){
 
@@ -74,7 +146,8 @@ int main(int argc, char *argv[])
                         new_process_pointer -> arrival_time = atol(element.c_str());
                         break;
                     default:
-                        break;
+                        throw "File-Format Module CANNOT parse the file!";;
+
                 }
 
             }
@@ -87,11 +160,9 @@ int main(int argc, char *argv[])
 
     } else
         cout << "Unable to open file";
-    /**
-    cout << "Number of processes: "<<processes.size() << "\n";
-    for (vector<process*>::iterator it = processes.begin() ; it != processes.end(); ++it)
-        cout << (*it) -> name << " " << (*it) -> priority << " " << (*it) -> instruction_file << " " << (*it) -> arrival_time << "\n" ;
-    **/
+}
+// Read process code files to get instruction names and times
+void read_process_files(vector<process*>& processes) {
 
     for (vector<process*>::iterator it = processes.begin() ; it != processes.end(); ++it) {
 
@@ -122,14 +193,10 @@ int main(int argc, char *argv[])
                             (*it) -> instruction_names.push_back(element);
                             break;
                         case 1:
-                            {
-                            long int execute_time = atol(element.c_str());
-                            (*it) -> execution_time += execute_time;
-                            (*it) -> instruction_times.push_back(execute_time);
+                            (*it) -> instruction_times.push_back(atol(element.c_str()));
                             break;
-                            }
                         default:
-                            break;
+                            throw "File-Format Module CANNOT parse the file!";;
                     }
 
                 }
@@ -138,7 +205,9 @@ int main(int argc, char *argv[])
 
             (*it) -> current_instruction_index = 0;
             (*it) -> maximum_instruction_index = (*it) -> instruction_times.size();
+            (*it) -> execution_time = 0;
             (*it) -> leaving_time = -1;
+
             code_file.close();
 
         } else
@@ -146,206 +215,30 @@ int main(int argc, char *argv[])
 
     }
 
-    /**
-    for (std::vector<process>::iterator m_it = processes.begin() ; m_it != processes.end(); ++m_it){
-        for (std::vector<string>::iterator s_it = m_it -> instruction_names.begin() ; s_it != m_it -> instruction_names.end(); ++s_it)
-            cout << *s_it <<  " ";
-        cout << "\n";
-        for (std::vector<long int>::iterator s_it = m_it -> instruction_times.begin() ; s_it != m_it -> instruction_times.end(); ++s_it)
-            cout << *s_it <<  " ";
-        cout << "\n";
-    }
-    **/
-    /**
-    for (std::vector<process*>::iterator it = processes.begin() ; it != processes.end(); it++){
-        cout << "(" << (*it) -> arrival_time << ")" << (*it) -> name << " "<< (*it) ->current_instruction_index << " ";
-    }
-
-    cout << "\n";
-    **/
-    vector<process*> backup_processes = processes;
-    sort(processes.begin(), processes.end(), less_than_key());
-
-    /**
-    for (std::vector<process*>::iterator it = processes.begin() ; it != processes.end(); it++){
-        cout << "(" << (*it) -> arrival_time << ")" << " "<< (*it) ->current_instruction_index << " " << (*it) -> name << "-" << (*it) -> maximum_instruction_index << " " << (*it) -> instruction_times[0] << " " ;
-    }
-
-    cout << "\n";
-    **/
-
-
-    list<process*> ready_queue;
-
-    process* current_process = 0;
-
-    ofstream output_file;
-    output_file.open("output.txt");
-
-    show_by_priority(ready_queue, current_process, output_file);
-
-    while (true){
-
-        if (processes.empty()) {
-
-            if(ready_queue.empty()) {
-
-                if(current_process == 0) {
-                    show_by_priority(ready_queue, current_process, output_file);
-                    //cout << "Arrivals Queue is Empty, Ready Queue is empty, CPU is idle. Finishing.." << "System Time: " <<  system_time << "\n\n";
-                    break;
-                } else {
-                    system_time += current_process -> instruction_times[current_process -> current_instruction_index];
-                    current_process -> current_instruction_index++;
-                    if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                        current_process -> leaving_time = system_time;
-                        current_process = 0;
-                        continue;
-                    } else {
-                        continue;
-                    }
-                }
-
-            } else {
-
-                if(current_process == 0) {
-                        current_process = ready_queue.front();
-                        ready_queue.pop_front();
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                } else {
-                    system_time += current_process -> instruction_times[current_process -> current_instruction_index];
-                    current_process -> current_instruction_index++;
-                    if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                        current_process -> leaving_time = system_time;
-                        current_process = 0;
-                        continue;
-                    } else {
-                        continue;
-                    }
-                }
-            }
-
-        } else {
-
-            if (processes.back() -> arrival_time <= system_time) {
-
-                long int number_of_arrivals = 0;
-
-                while(!processes.empty() && processes.back() -> arrival_time <= system_time) {
-                    insert_by_priority(ready_queue, processes.back());
-                    processes.pop_back();
-                    number_of_arrivals++;
-                }
-
-                if (current_process == 0) {
-                    show_by_priority(ready_queue, current_process, output_file);
-                    current_process = ready_queue.front();
-                    ready_queue.pop_front();
-                    /**
-                    if(number_of_arrivals > 1) {
-                        show_by_priority(ready_queue, current_process);
-                    }
-                    **/
-                    continue;
-                } else {
-
-                    if (ready_queue.front() -> priority < current_process -> priority) {
-                        insert_by_priority(ready_queue, current_process);
-                        current_process = ready_queue.front();
-                        ready_queue.pop_front();
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                    } else {
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                    }
-
-                }
-
-            } else {
-
-                if(ready_queue.empty()) {
-
-                    if (current_process == 0) {
-                        system_time = processes.back() -> arrival_time;
-                        continue;
-                    } else {
-                        system_time += (current_process -> instruction_times[current_process -> current_instruction_index]);
-                        current_process -> current_instruction_index++;
-                        if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                            current_process -> leaving_time = system_time;
-                            current_process = 0;
-                            continue;
-                        } else {
-                            continue;
-                        }
-                    }
-
-                } else {
-
-                    if (current_process == 0) {
-                        current_process = ready_queue.front();
-                        ready_queue.pop_front();
-                        show_by_priority(ready_queue, current_process, output_file);
-                        continue;
-                    } else {
-                        system_time += current_process -> instruction_times[current_process -> current_instruction_index];
-                        current_process -> current_instruction_index++;
-                        if (current_process -> current_instruction_index == current_process -> maximum_instruction_index){
-                            current_process -> leaving_time = system_time;
-                            current_process = 0;
-                            continue;
-                        } else {
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    cout << "\n";
-    output_file << "\n";
-
-    for (vector<process*>::iterator it = backup_processes.begin() ; it != backup_processes.end(); ++it) {
-        cout <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
-        output_file <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
-        cout <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
-        output_file <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
-    }
-
-    output_file.close();
-
-    return 0;
-
 }
+// Iterate through ready queue and write it output to the output file.
+void show_by_priority(list<process*>& ready_queue, ofstream& output_file){
 
-void show_by_priority(list<process*>& ready_queue, process* current_process, ofstream& output_file){
-
-    cout << system_time << ":";
+    //cout << system_time << ":";
     output_file << system_time << ":";
-    cout << "HEAD" << "-";
+    //cout << "HEAD" << "-";
     output_file << "HEAD" << "-";
 
-    if(current_process != 0) {
-        cout << current_process -> name << "[" << current_process -> current_instruction_index + 1 << "]" << "-";
-        output_file << current_process -> name << "[" << current_process -> current_instruction_index + 1 << "]" << "-";
-    } else {
-        if(ready_queue.empty()) {
-            cout << "-";
-            output_file << "-";
-        }
+    if(ready_queue.empty()) {
+        //cout << "-";
+        output_file << "-";
     }
 
     for(list<process*>::iterator ready_queue_iterator = ready_queue.begin(); ready_queue_iterator != ready_queue.end(); ready_queue_iterator++){
-        cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
+        //cout << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
         output_file << (*ready_queue_iterator) -> name << "[" << (*ready_queue_iterator) -> current_instruction_index + 1 << "]" << "-";
     }
-    cout << "TAIL" << "\n";
+
+    //cout << "TAIL" << "\n";
     output_file << "TAIL" << "\n";
 }
 
+// Find the appropriate place for the given process based on priority and arrival time, then call list's insert method
 void insert_by_priority(list<process*>& ready_queue, process* new_process_pointer) {
 
     list<process*>::iterator ready_queue_iterator;
@@ -362,3 +255,19 @@ void insert_by_priority(list<process*>& ready_queue, process* new_process_pointe
 
     ready_queue.insert(ready_queue_iterator, new_process_pointer);
 }
+// Show turnaround and waiting time for processes
+void show_statistics(vector<process*>& processes_backup, ofstream& output_file) {
+
+    //cout << "\n";
+    output_file << "\n";
+
+    for (vector<process*>::iterator it = processes_backup.begin() ; it != processes_backup.end(); ++it) {
+        //cout <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
+        output_file <<  "Turnaround time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time << " ms\n" ;
+        //cout <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << " ms\n" ;
+        output_file <<  "Waiting time for " << (*it) -> name << " = " << (*it) -> leaving_time - (*it) -> arrival_time - (*it) -> execution_time << "\n" ;
+    }
+
+}
+
+
